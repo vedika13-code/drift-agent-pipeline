@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drift Diagnosis &amp; Verification Gate — Evaluation Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0c1118;
+    --ink-2:#161d29;
+    --paper:#f6f4ec;
+    --paper-dim:#e7e3d4;
+    --line:#33404f;
+    --line-soft:#2a3542;
+    --commit:#3f9d63;
+    --commit-bg:#173023;
+    --reject:#c65b4a;
+    --reject-bg:#2e1a17;
+    --amber:#d9a441;
+    --muted:#8b93a3;
+    --text:#eef0f3;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    padding:48px 40px 80px;
+    min-height:100vh;
+  }
+  .wrap{max-width:1080px;margin:0 auto;}
+
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    border-bottom:1px solid var(--line);
+    padding-bottom:24px;
+    margin-bottom:36px;
+    flex-wrap:wrap;
+    gap:16px;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--amber);
+    margin-bottom:10px;
+  }
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:clamp(28px,3.6vw,40px);
+    line-height:1.08;
+    margin:0;
+    max-width:640px;
+  }
+  .run-meta{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    color:var(--muted);
+    text-align:right;
+    line-height:1.7;
+  }
+  .run-meta .dot{color:var(--commit);}
+
+  .section-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0 0 14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .section-label::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background:var(--line-soft);
+  }
+
+  /* --- system comparison cards --- */
+  .systems{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+    margin-bottom:40px;
+  }
+  @media (max-width:760px){ .systems{grid-template-columns:1fr;} }
+
+  .card{
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:22px 24px 20px;
+    position:relative;
+  }
+  .card.agent{border-color:#3d6b8a;}
+  .card-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:16px;
+  }
+  .card-title{
+    font-family:'Fraunces',serif;
+    font-size:19px;
+    font-weight:600;
+  }
+  .card-sub{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.08em;
+  }
+  .metric-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding:8px 0;
+    border-bottom:1px solid var(--line-soft);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+  }
+  .metric-row:last-child{border-bottom:none;}
+  .metric-row .k{color:var(--muted);}
+  .metric-row .v{color:var(--text);font-weight:600;font-size:14px;}
+  .metric-row .v.good{color:var(--commit);}
+  .metric-row .v.warn{color:var(--amber);}
+
+  .headline-stat{
+    display:flex;
+    gap:22px;
+    margin-top:16px;
+    padding-top:16px;
+    border-top:1px dashed var(--line-soft);
+  }
+  .headline-stat div{flex:1;}
+  .headline-num{
+    font-family:'Fraunces',serif;
+    font-size:34px;
+    font-weight:700;
+    line-height:1;
+  }
+  .headline-num.commit{color:var(--commit);}
+  .headline-cap{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:var(--muted);
+    margin-top:6px;
+    line-height:1.4;
+  }
+
+  /* --- ledger table --- */
+  .ledger{
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:4px;
+    overflow:hidden;
+    margin-bottom:40px;
+  }
+  table{width:100%;border-collapse:collapse;}
+  thead th{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    text-align:left;
+    padding:14px 16px;
+    background:var(--paper-dim);
+    color:#4a4636;
+    border-bottom:1px solid #d8d3bf;
+  }
+  thead th.center, tbody td.center{text-align:center;}
+  tbody td{
+    padding:14px 16px;
+    font-size:13.5px;
+    border-bottom:1px solid #e3dfcc;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  .event-name{font-family:'Inter',sans-serif;font-weight:600;font-size:13.5px;}
+  .event-kind{color:#6b6653;font-size:11px;display:block;margin-top:2px;font-family:'IBM Plex Mono',monospace;}
+  .stamp{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:3px 9px;
+    border-radius:20px;
+    font-size:11px;
+    font-weight:600;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .stamp.fixed{background:#e1f3e6;color:#1d7a41;}
+  .stamp.never{background:#f7e4e0;color:#a8402e;}
+
+  /* --- gate section --- */
+  .gate{
+    display:grid;
+    grid-template-columns:1.1fr 1.4fr;
+    gap:20px;
+    margin-bottom:40px;
+  }
+  @media (max-width:760px){ .gate{grid-template-columns:1fr;} }
+  .gate-card{
+    background:var(--ink-2);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:24px;
+  }
+  .gate-num-row{display:flex;align-items:baseline;gap:14px;}
+  .gate-pct{
+    font-family:'Fraunces',serif;
+    font-size:52px;
+    font-weight:700;
+    color:var(--amber);
+    line-height:1;
+  }
+  .gate-frac{
+    font-family:'IBM Plex Mono',monospace;
+    color:var(--muted);
+    font-size:13px;
+  }
+  .gate-desc{
+    margin-top:14px;
+    font-size:13px;
+    line-height:1.6;
+    color:#c7cbd4;
+  }
+  .gate-note{
+    font-size:13px;
+    line-height:1.7;
+    color:#c7cbd4;
+  }
+  .gate-note b{color:var(--text);}
+
+  footer{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--muted);
+    border-top:1px solid var(--line);
+    padding-top:18px;
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  footer code{
+    background:var(--ink-2);
+    padding:2px 6px;
+    border-radius:3px;
+    color:var(--amber);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="eyebrow">Evaluation run &mdash; live pipeline demonstration</div>
+      <h1>Drift diagnosis agent vs. rule-based baseline, gated by transactional verification</h1>
+    </div>
+    <div class="run-meta">
+      <div><span class="dot">●</span> run completed</div>
+      <div>backend: mock heuristic (offline)</div>
+      <div>4 drift events injected · 50 windows evaluated</div>
+    </div>
+  </header>
+
+  <p class="section-label">System comparison</p>
+  <div class="systems">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Baseline</div>
+        <div class="card-sub">rule-based repair</div>
+      </div>
+      <div class="metric-row"><span class="k">Detection precision / recall</span><span class="v">1.00 / 0.96</span></div>
+      <div class="metric-row"><span class="k">F1</span><span class="v">0.98</span></div>
+      <div class="metric-row"><span class="k">False positives</span><span class="v good">0</span></div>
+      <div class="metric-row"><span class="k">Repair attempts</span><span class="v">72</span></div>
+      <div class="metric-row"><span class="k">Rejected by verifier</span><span class="v">70</span></div>
+      <div class="metric-row"><span class="k">Repair correctness</span><span class="v warn">0.50</span></div>
+      <div class="headline-stat">
+        <div>
+          <div class="headline-num">2</div>
+          <div class="headline-cap">repairs committed</div>
+        </div>
+        <div>
+          <div class="headline-num">1 / 4</div>
+          <div class="headline-cap">drift events actually fixed</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card agent">
+      <div class="card-head">
+        <div class="card-title">Agentic</div>
+        <div class="card-sub">LLM diagnosis + verification gate</div>
+      </div>
+      <div class="metric-row"><span class="k">Detection precision / recall</span><span class="v">1.00 / 0.96</span></div>
+      <div class="metric-row"><span class="k">F1</span><span class="v">0.98</span></div>
+      <div class="metric-row"><span class="k">False positives</span><span class="v good">0</span></div>
+      <div class="metric-row"><span class="k">Repair attempts</span><span class="v">27</span></div>
+      <div class="metric-row"><span class="k">Rejected by verifier</span><span class="v">23</span></div>
+      <div class="metric-row"><span class="k">Repair correctness</span><span class="v good">0.75</span></div>
+      <div class="headline-stat">
+        <div>
+          <div class="headline-num commit">4</div>
+          <div class="headline-cap">repairs committed</div>
+        </div>
+        <div>
+          <div class="headline-num commit">3 / 4</div>
+          <div class="headline-cap">drift events actually fixed</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="section-label">Per-event outcome</p>
+  <div class="ledger">
+    <table>
+      <thead>
+        <tr>
+          <th>Drift event</th>
+          <th class="center">Injected&nbsp;day</th>
+          <th class="center">Baseline&nbsp;fix</th>
+          <th class="center">Agent&nbsp;fix</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="event-name">Column rename</span><span class="event-kind">trip_distance → trip_dist_miles (schema drift)</span></td>
+          <td class="center">15</td>
+          <td class="center"><span class="stamp fixed">✓ day 15</span></td>
+          <td class="center"><span class="stamp fixed">✓ day 15</span></td>
+        </tr>
+        <tr>
+          <td><span class="event-name">Unit shift</span><span class="event-kind">tip_amount ×100 (cents mistaken for dollars)</span></td>
+          <td class="center">25</td>
+          <td class="center"><span class="stamp never">never fixed</span></td>
+          <td class="center"><span class="stamp fixed">✓ day 25</span></td>
+        </tr>
+        <tr>
+          <td><span class="event-name">Missing field</span><span class="event-kind">passenger_count → 90% null</span></td>
+          <td class="center">38</td>
+          <td class="center"><span class="stamp never">never fixed</span></td>
+          <td class="center"><span class="stamp never">never fixed</span></td>
+        </tr>
+        <tr>
+          <td><span class="event-name">Distribution shift</span><span class="event-kind">fare_amount mean ×1.8 (pricing change)</span></td>
+          <td class="center">48</td>
+          <td class="center"><span class="stamp never">never fixed</span></td>
+          <td class="center"><span class="stamp fixed">✓ day 48</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="section-label">Verification / safety gate</p>
+  <div class="gate">
+    <div class="gate-card">
+      <div class="gate-num-row">
+        <div class="gate-pct">85%</div>
+        <div class="gate-frac">17 / 20 caught</div>
+      </div>
+      <div class="gate-desc">
+        Adversarial stress test: 20 deliberately unsafe or malformed patches
+        (bad renames, extreme unit factors, negative scales, wrong columns)
+        were submitted directly to the verifier to see how many it would
+        block before commit.
+      </div>
+    </div>
+    <div class="gate-card">
+      <div class="gate-note">
+        The gate isn't just detecting drift better &mdash; it's also refusing
+        to commit a repair unless a <b>post-patch statistical re-test</b>
+        confirms the fix actually resolved the drift. That's why neither
+        system fixed the <b>missing_field</b> event: the agent's proposed
+        median-imputation was correctly rejected, because filling 90% of a
+        column with one constant value doesn't restore the true distribution
+        &mdash; even though it would look schema-complete. This is the
+        transactional commit/rollback guarantee described in the proposal,
+        working as intended.
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div>Re-run live with: <code>python -m eval.run_experiment</code></div>
+    <div>full logs: <code>logs/run_log.json</code> · <code>logs/comparison_summary.csv</code></div>
+  </footer>
+
+</div>
+</body>
+</html>

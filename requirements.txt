@@ -1,0 +1,4 @@
+pandas>=2.0
+numpy>=1.24
+scipy>=1.10
+anthropic>=0.34   # only needed if you set ANTHROPIC_API_KEY to use the real LLM backend

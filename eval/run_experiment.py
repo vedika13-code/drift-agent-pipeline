@@ -10,12 +10,15 @@ then compared on: detection precision/recall, repair correctness,
 time-to-repair, % unsafe patches caught (adversarial test), false-positive rate.
 
 Run with:  python -m eval.run_experiment
-Optional:  ANTHROPIC_API_KEY=sk-... python -m eval.run_experiment   (uses real LLM)
+Optional:  GEMINI_API_KEY=AIza... python -m eval.run_experiment   (uses real LLM)
 """
 import os
 import sys
 import json
 import time
+
+from dotenv import load_dotenv
+load_dotenv()
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -210,7 +213,7 @@ def main():
     baseline_log, baseline_detect_day, baseline_fix_day = run_system(
         "baseline", baseline_propose, dirty_df, reference_df, events, EXPECTED_SCHEMA, baseline_db)
 
-    backend_note = "REAL Claude API" if os.environ.get("ANTHROPIC_API_KEY") else "mock heuristic backend (no ANTHROPIC_API_KEY set)"
+    backend_note = "REAL Gemini API" if os.environ.get("GEMINI_API_KEY") else "mock heuristic backend (no GEMINI_API_KEY set)"
     print(f"\nRunning AGENTIC system ({backend_note})...")
     agent_log, agent_detect_day, agent_fix_day = run_system(
         "agent", agent_propose, dirty_df, reference_df, events, EXPECTED_SCHEMA, agent_db)

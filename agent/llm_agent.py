@@ -11,7 +11,7 @@ before it is ever committed. This is what makes the system "gated" rather than
 "the LLM writes and runs arbitrary code."
 
 Two backends:
-  - real: calls the Anthropic API (requires ANTHROPIC_API_KEY in the environment)
+  - real: calls the Gemini API (requires GEMINI_API_KEY in the environment)
   - mock: a deterministic heuristic stand-in used when no API key is present,
     so the whole pipeline is runnable/testable offline. It is intentionally
     MORE general than the rule-based baseline (e.g. it infers unit-conversion
@@ -23,6 +23,10 @@ Two backends:
 import json
 import os
 import time
+
+from dotenv import load_dotenv
+load_dotenv()
+
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, List
 import numpy as np
@@ -73,17 +77,19 @@ def _build_user_prompt(day: int, finding_kind: str, column: str, detail: Dict[st
     return json.dumps(payload, default=str)
 
 
-def _call_real_llm(system_prompt: str, user_prompt: str, model: str = "claude-sonnet-4-6") -> str:
-    import anthropic
-    client = anthropic.Anthropic()
-    resp = client.messages.create(
+def _call_real_llm(system_prompt: str, user_prompt: str, model: str = "gemini-2.5-flash") -> str:
+    from google import genai
+    from google.genai import types
+    client = genai.Client()
+    response = client.models.generate_content(
         model=model,
-        max_tokens=500,
-        system=system_prompt,
-        messages=[{"role": "user", "content": user_prompt}],
+        contents=user_prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            max_output_tokens=500,
+        ),
     )
-    text = "".join(block.text for block in resp.content if getattr(block, "type", "") == "text")
-    return text
+    return response.text
 
 
 def _mock_llm_diagnose(day: int, finding_kind: str, column: str, detail: Dict[str, Any],
@@ -187,7 +193,7 @@ def diagnose_and_propose(day: int, finding_kind: str, column: str, detail: Dict[
                           expected_schema: Dict[str, str], window_df: pd.DataFrame,
                           reference_df: pd.DataFrame, backend: str = "auto") -> AgentProposal:
     t0 = time.time()
-    use_real = (backend == "real") or (backend == "auto" and os.environ.get("ANTHROPIC_API_KEY"))
+    use_real = (backend == "real") or (backend == "auto" and os.environ.get("GEMINI_API_KEY"))
 
     if use_real:
         try:

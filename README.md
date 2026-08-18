@@ -19,8 +19,9 @@ pip install -r requirements.txt
 # Run with the mock LLM backend (no API key needed, fully offline/reproducible):
 python -m eval.run_experiment
 
-# Run with the real Claude API instead of the mock heuristic:
-export ANTHROPIC_API_KEY=sk-ant-...
+# Run with the real Gemini API instead of the mock heuristic:
+# Add your GEMINI_API_KEY to a `.env` file in the root directory:
+# echo "GEMINI_API_KEY=your_key_here" > .env
 python -m eval.run_experiment
 ```
 
@@ -38,7 +39,7 @@ data/generate_data.py     synthetic NYC-taxi-like trip generator + schema/busine
 drift/injector.py         injects 4 KNOWN drift events (ground truth kept for eval only)
 drift/detector.py         rolling KS-test + PSI + schema/null-rate checks (shared by both systems)
 repair/rule_based.py      BASELINE: hard-coded rename table + static unit-conversion table
-agent/llm_agent.py        AGENT: Claude API call (or mock heuristic fallback) -> structured patch
+agent/llm_agent.py        AGENT: Gemini API call (or mock heuristic fallback) -> structured patch
 agent/verifier.py         gate: dry-run patch -> schema check, business-rule check, null-increase
                            check, post-patch KS re-test -> commit (SQLite log) or rollback
 eval/run_experiment.py    orchestrates both systems day-by-day + adversarial safety test
@@ -67,7 +68,7 @@ For every proposed patch:
    fails a constraint check and rolls back rather than committing.
 
 ### Mock LLM backend
-With no `ANTHROPIC_API_KEY` set, `agent/llm_agent.py` uses a deterministic
+With no `GEMINI_API_KEY` set, `agent/llm_agent.py` uses a deterministic
 heuristic stand-in instead of a real API call, so the whole pipeline runs
 offline and reproducibly. It's deliberately built to be *more general* than
 the rule-based baseline (it infers unit-conversion factors from observed
@@ -114,7 +115,7 @@ significantly diverges from the reference distribution. That's the gate doing
 its job: it's refusing to "fix" schema-completeness while quietly destroying
 statistical fidelity, rather than a bug to paper over.
 
-Exact numbers will shift slightly run-to-run with the real Claude backend
+Exact numbers will shift slightly run-to-run with the real Gemini backend
 (the mock heuristic is a stand-in, not a claim about real-model performance)
 and are meant to demonstrate the harness works end-to-end, not as a
 publication-ready benchmark.
@@ -126,7 +127,7 @@ publication-ready benchmark.
 - Controlled drift injection (schema/unit/missing/distribution) with hidden ground truth
 - Baseline drift detector (rolling KS-test + PSI + schema/null checks)
 - Rule-based baseline repair (intentionally narrow, to demonstrate the gap)
-- LLM agent (real Claude API path + offline mock fallback) producing structured diagnoses
+- LLM agent (real Gemini API path + offline mock fallback) producing structured diagnoses
 - Transactional verification/gating layer backed by SQLite (commit/rollback log)
 - Adversarial safety test (% unsafe patches caught)
 - Full evaluation harness computing precision/recall, repair correctness,
